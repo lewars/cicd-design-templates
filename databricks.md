@@ -150,11 +150,11 @@ tasks:
 
 ```mermaid
 graph TD
-    A[Developer PR] -->|Push| B[Lint & Unit Tests]
+    A[Feature Branch / PR] -->|Push| B[Lint & Unit Tests]
     B -->|Merge to Main| C[Deploy to Staging]
     C -->|Auto-Tests| D{Release Logic}
     D -->|Release-Please PR| E[Prod Deployment]
-    D -->|ChatOps /release| E[Prod Deployment]
+    A -->|ChatOps /release| E[Prod Deployment]
     E -->|Success| F[Teams Notification]
 
 ```
