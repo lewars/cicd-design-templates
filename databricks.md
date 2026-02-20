@@ -213,3 +213,26 @@ jobs:
 | **CI/CD** | GitHub Actions (with `act` for local testing) |
 | **Versioning** | Release Please (SemVer) |
 | **Communication** | Microsoft Teams (Adaptive Cards) |
+
+### 9. Technology Stack & Resource Directory
+
+This section provides a centralized directory of the core technologies, tools, and documentation links that comprise our DataOps platform.
+
+| Component | Technology | Purpose | Documentation |
+| --- | --- | --- | --- |
+| **Core Framework** | **Databricks Asset Bundles (DABs)** | Declarative infrastructure & resource management. | [DABs Docs](https://docs.databricks.com/en/dev-tools/bundles/index.html) |
+| **Task Runner** | **Go Task (Taskfile)** | Command-line abstraction and dev automation. | [Taskfile Guide](https://taskfile.dev/usage/) |
+| **CI/CD Platform** | **GitHub Actions** | Orchestration of tests, merges, and deployments. | [GH Actions Docs](https://docs.github.com/en/actions) |
+| **Local CI Testing** | **act** | Runs GitHub Actions locally to speed up pipeline dev. | [act Repository](https://github.com/nektos/act) |
+| **Version Manager** | **Release Please** | Automates SemVer and Changelog generation. | [Release Please Docs](https://github.com/googleapis/release-please) |
+| **Testing Suite** | **pytest** | Python framework for unit and resource validation. | [pytest Docs](https://docs.pytest.org/) |
+| **Secret Logic** | **Databricks CLI** | Used for secret-scope creation and API interaction. | [CLI Reference](https://docs.databricks.com/en/dev-tools/cli/index.html) |
+| **Communication** | **MS Teams Webhooks** | Automated deployment notifications and ChatOps. | [Teams Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) |
+| **Standards** | **Conventional Commits** | Structured commit messages for automation logic. | [Convention Guide](https://www.conventionalcommits.org/) |
+
+---
+
+### Internal Documentation & Helpers
+
+* **Databricks SDK for Python**: Essential for writing custom resource validation scripts in `tests/`.
+* [Link: Databricks SDK Reference](https://databricks-sdk-py.readthedocs.io/)
