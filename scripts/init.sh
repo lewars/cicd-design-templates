@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script creates an initial layout
+# Create an initial layout
 
 # Define the directory structure
 DIRS=(
