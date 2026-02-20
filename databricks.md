@@ -150,17 +150,13 @@ tasks:
 
 ```mermaid
 graph TD
-    A[Create Feature Branch] --> B[Push to Origin]
-    B --> C[Create PR]
-    C --> D[Trigger Unit Tests and Validation]
-    D --> E[Approve PR]
-    E --> F[Merge to Main]
-    F --> G[Deploy to Staging]
-    G --> H[Trigger Integration/Non-functional Tests]
-    H --> I[Release Logic]
-    I --> J[Execute Release-Please PR]
-    J --> K[Deploy to Production]
-    K --> L[Notify Teams]
+    A[Feature Branch / PR] -->|Push| B[Lint & Unit Tests]
+    B -->|Merge to Main| C[Deploy to Staging]
+    C -->|Auto-Tests| D{Release Logic}
+    D -->|Release-Please PR| E[Prod Deployment]
+    A -->|ChatOps /release| E[Prod Deployment]
+    E -->|Success| F[Teams Notification]
+
 ```
 
 ### 6.2 The ChatOps Escape Hatch
