@@ -1,0 +1,48 @@
+#+title: ADR-000: [Short Title of the Decision]
+#+author: Alistair Y. Lewars
+#+date: [2026-02-20]
+#+status: proposed | accepted | superseded | deprecated
+
+* Context and Problem Statement
+Identify the issue we are addressing. Describe the technical environment, user requirements, or constraints (e.g., Fedora Linux workstation limitations, specific MLOps hardware requirements for the Aroma server, or Jenkins shared library constraints).
+* Decision Drivers
+
+* [ ] Driver 1 (e.g., Need for zero-inference data handling)
+* [ ] Driver 2 (e.g., Compatibility with Emacs =project.el= workflow)
+* [ ] Driver 3 (e.g., Minimizing vendor lock-in for CI/CD)
+
+* Considered Options
+
+1. [Option 1 Name]
+2. [Option 2 Name]
+3. [Option 3 Name]
+
+* Decision Outcome
+Chosen option: "[Option Name]", because [justification based on drivers].
+
+** Consequences
+*** Positive (Pros)
+
+* [Consequence 1]
+* [Consequence 2]
+*** Negative (Cons)
+* [Consequence 1]
+* [Consequence 2]
+
+* Pros and Cons of Options
+** [Option 1]
+
+* Good because [argument]
+* Bad because [argument]
+
+** [Option 2]
+
+* Good because [argument]
+* Bad because [argument]
+
+* Implementation Notes
+Items to consider during implementation (e.g., specific =Taskfile= commands to update, or required changes to the DAB =databricks.yml=).
+* Metadata
+
+* *Consulted:* [Name/Role]
+* *Supersedes:* [[file:ADR-XXX.org][ADR-XXX]] (if applicable)

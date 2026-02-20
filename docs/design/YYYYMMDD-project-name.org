@@ -1,0 +1,60 @@
+#+title: Design Doc: [Project Name]
+#+author: Alistair Y. Lewars
+#+date: [2026-02-20]
+#+options: toc:2
+#+filetags: :design:platform:
+
+* Status
+| Field     | Value                                  |
+|-----------+----------------------------------------|
+| Status    | DRAFT / IN-REVIEW / APPROVED           |
+| Owner     | Alistair Y. Lewars                     |
+| Reviewers | [Name/Team]                            |
+| Updated   | [2026-02-20]                           |
+
+* Abstract
+A brief (1-2 paragraph) overview of the project. What are we building, and why does it matter?
+
+* Background
+Why is this project being proposed? Provide context on the current state (e.g., "The current Databricks deployment relies on manual workspace imports").
+
+* Goals & Non-Goals
+** Goals
+- [ ] Automate X using Taskfiles.
+- [ ] Implement GitOps for web-app deployments.
+** Non-Goals
+- We are NOT migrating the legacy Jenkins server yet.
+- We are NOT supporting multi-cloud at this stage.
+
+* Proposed Architecture
+
+Detailed description of the solution. Use sub-headings for components (e.g., Data Ingestion, K8s Networking, MLOps Hardware).
+
+** Technical Specification
+Describe how the components interact.
+
+#+begin_src yaml :tangle example-config.yaml
+# Example of a configuration or manifest snippet
+kind: Deployment
+metadata:
+  name: example-service
+#+end_src
+
+* Cross-Cutting Concerns
+** Security & Compliance
+How are secrets handled? (e.g., Vault, ExternalSecrets). Mention the SRE standards for the Fedora/K8s environments.
+** Observability
+Logging, metrics, and tracing strategy.
+** Scalability
+How will the system handle a 10x increase in load?
+
+* Implementation Plan
+1. Phase 1: Infrastructure (Terraform/Ansible)
+2. Phase 2: Core Platform (K8s/Databricks)
+3. Phase 3: Application Migration
+
+* Alternatives Considered
+Briefly mention why other paths (e.g., using raw YAML instead of Helm) were rejected. Reference [[file:../adr/0001-record-architecture-decisions.org][ADR-0001]] if applicable.
+
+* Discussion & Feedback
+[This section is for capturing notes from reviews or brain-dumping during the design phase.]
