@@ -261,10 +261,172 @@ jobs:
 
 
 ```
+---
+
+## 6. Testing & Quality Assurance
+
+To protect **Production** and eliminate resource duplication, the platform enforces a multi-layered testing strategy for all assets.
+
+### 6.1 Testing Layers
+
+* **Unit Testing (Local/CI)**: Validates code structure on every push.
+
+Unit tests can be run locally with a command like `task test:unit`.
+
+**Example Unit Test**
+
+```python
+import pytest
+import yaml
+import os
+
+DASHBOARD_CONFIG_PATH = "resources/dashboards.yml"
+
+def load_dashboard_config():
+    if not os.path.exists(DASHBOARD_CONFIG_PATH):
+        pytest.fail(f"Config file not found at {DASHBOARD_CONFIG_PATH}")
+    with open(DASHBOARD_CONFIG_PATH, "r") as f:
+        return yaml.safe_load(f)
+
+def test_dashboard_file_path_exists():
+    """
+    Validates that the source JSON file for the dashboard exists in the src directory.
+    """
+    config = load_dashboard_config()
+    dashboards = config.get("resources", {}).get("dashboards", {})    
+    for dash_id, settings in dashboards.items():
+        file_path = settings.get("file_path", "")
+        actual_path = os.path.join("resources", file_path)
+        assert os.path.exists(actual_path), f"Dashboard source file not found: {actual_path}"
+```
+
+* **Integration Testing (Staging)**: Verifies live functionality after deploymenting to Staging.
+
+**Example Integration Test**
+```python
+import pytest
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import iam, dashboards
+
+@pytest.fixture
+def ws():
+    return WorkspaceClient()
+
+def test_dashboard_warehouse_connection(ws):
+    """
+    Validates that the dashboard is linked to a functional 
+    SQL Warehouse in the current environment.
+    """
+    dash = [d for d in ws.dashboards.list() if "Daily Sales" in d.display_name][0]
+    warehouse_id = dash.warehouse_id
+    warehouse = ws.warehouses.get(warehouse_id)
+    assert warehouse.state.value in ["RUNNING", "STARTING"], \
+        f"Dashboard warehouse {warehouse_id} is in invalid state: {warehouse.state.value}."
+```
+
+* **Non-Functional Testing (Staging/Prod)**: Evaluates performance and reliability.
+
+**Example Non-functional Test**
+```python
+import pytest
+import time
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service import sql
+
+MAX_ACCEPTED_LATENCY_SEC = 5.0
+
+@pytest.fixture
+def ws():
+    return WorkspaceClient()
+
+def test_daily_sales_query_performance(ws):
+    """
+    Executes the core 'Daily Sales' SQL logic and validates 
+    that latency is within the 5s threshold.
+    """
+    warehouse_id = "your_warehouse_id_from_targets" 
+    sales_query = "SELECT sum(amount), date FROM main.sales.daily_transactions GROUP BY date"
+
+    start_time = time.time()
+    query_exec = ws.statement_execution.execute_statement(
+        warehouse_id=warehouse_id,
+        statement=sales_query,
+        catalog="main" # Or derived from ${var.source_catalog}
+    )
+    execution_time = time.time() - start_time
+
+    assert execution_time < MAX_ACCEPTED_LATENCY_SEC, \
+        f"Latency failure: Query took {execution_time:.2f}s, exceeding SLO of {MAX_ACCEPTED_LATENCY_SEC}s."
+```
+
+### 6.2 Summary Table
+
+| Phase | Test Focus | Tooling | Environment |
+| --- | --- | --- | --- |
+| **CI** | Schema, Naming, SQL Syntax | `pytest`, DAB CLI | Feature Branch |
+| **Promotion** | API validation, ACLs, Connectivity | `pytest`, Databricks SDK | Staging |
+| **Release** | Latency SLOs, Warehouse Scaling | SQL Execution API | Staging/Prod |
+
 
 ---
 
-## 6. Technology Stack & Resource Directory
+## 7. Automated Notifications via MS Teams
+
+To support the **ChatOps** feedback loop, the platform integrates with **MS Teams Webhooks** to alert the team when a pipeline fails in **Staging** or **Production**.
+
+### 7.1 Implementation Strategy
+
+* **Trigger**: Uses the `if: failure()` conditional in GitHub Actions to ensure notifications only fire on errors.
+* **Context**: Sends the **Bundle Name**, **Environment**, and **SemVer** along with a direct link to the failed run.
+* **Fast-Track Support**: Directly supports the **ChatOps** "Failure" state by providing immediate error visibility.
+
+### 7.2 GitHub Workflow Snippet
+
+```yaml
+- name: Notify Teams on Failure
+  if: failure() # Only executes if a previous step fails
+  run: |
+    bash scripts/db_notify.sh \
+      --status "Failed" \
+      --env "${{ env.TARGET_ENV }}" \
+      --version "${{ var.bundle_version }}" \
+      --webhook_url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+  env:
+    # Captures context for the notification
+    TARGET_ENV: prod
+
+```
+
+### 7.3 Payload Script (`scripts/db_notify.sh`)
+
+This script constructs the JSON payload required by Teams.
+
+```bash
+#!/bin/bash
+# scripts/db_notify.sh
+# Simplified curl command for Teams Webhook
+
+curl -H "Content-Type: application/json" \
+     -d "{
+           'type': 'message',
+           'attachments': [{
+             'contentType': 'application/vnd.microsoft.card.adaptive',
+             'content': {
+               'body': [{
+                 'type': 'TextBlock',
+                 'text': '❌ Deployment Failed: $BUNDLE_NAME',
+                 'weight': 'bolder'
+               }, {
+                 'type': 'TextBlock',
+                 'text': 'Env: $ENV | Version: $VERSION'
+               }]
+             }
+           }]
+         }" $WEBHOOK_URL
+
+```
+---
+## 8. Technology Stack & Resource Directory
 
 This section provides a centralized directory of the core technologies, tools, and documentation links that comprise our DataOps platform.
 
