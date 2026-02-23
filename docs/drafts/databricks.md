@@ -219,17 +219,7 @@ jobs:
 
 ---
 
-## 8. Summary of the DevOps Stack
-
-| Component | Tool |
-| --- | --- |
-| **Orchestration** | Databricks Asset Bundles (DABs) |
-| **Task Management** | Go Task (`Taskfile.yml`) |
-| **CI/CD** | GitHub Actions (with `act` for local testing) |
-| **Versioning** | Release Please (SemVer) |
-| **Communication** | Microsoft Teams (Adaptive Cards) |
-
-### 9. Technology Stack & Resource Directory
+## 8. Technology Stack & Resource Directory
 
 This section provides a centralized directory of the core technologies, tools, and documentation links that comprise our DataOps platform.
 
@@ -245,6 +235,7 @@ This section provides a centralized directory of the core technologies, tools, a
 | **Communication** | **MS Teams Webhooks** | Automated deployment notifications and ChatOps. | [Teams Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) |
 | **Standards** | **Conventional Commits** | Structured commit messages for automation logic. | [Convention Guide](https://www.conventionalcommits.org/) |
 
+
 ---
 
 ### Internal Documentation & Helpers
@@ -252,8 +243,3 @@ This section provides a centralized directory of the core technologies, tools, a
 * **Databricks SDK for Python**: Essential for writing custom resource validation scripts in `tests/`.
 * [Link: Databricks SDK Reference](https://databricks-sdk-py.readthedocs.io/)
 
-```
-
-Would you like me to generate the GitHub Action workflow YAML for the ChatOps `/release` command described in Section 6?
-
-```
