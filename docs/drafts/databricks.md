@@ -4,7 +4,7 @@
 
 The primary objective of this platform is to automate the deployment of Databricks resources while strictly protecting the integrity of **Staging** and **Production** environments. By employing a **Colocated DAB Pattern**, we solve the critical issue of resource duplication—preventing scenarios where dashboards or jobs with identical names are accidentally published or overwritten. This system utilizes **GitHub Actions** to orchestrate a robust CI/CD pipeline, ensuring that every change is validated, versioned, and promoted through a structured lifecycle.
 
-## 1. Environment Strategy & Isolation
+## 2. Environment Strategy & Isolation
 
 The platform utilizes a three-tier architecture to isolate development from business-critical assets:
 
@@ -16,11 +16,11 @@ The platform utilizes a three-tier architecture to isolate development from busi
 
 ---
 
-## 1. CI/CD & The "Fast-Track" Release
+## 3. CI/CD & The "Fast-Track" Release
 
 This section outlines the lifecycle of a code change as it moves through the automated pipeline. The platform employs a dual-path deployment strategy: a standard, versioned release cycle for planned updates and a "Fast-Track" ChatOps path for emergency hotfixes and urgent deliveries.
 
-### 1.1 Workflow Visualization
+### 3.1 Workflow Visualization
 
 ```mermaid
 graph TD
@@ -34,7 +34,7 @@ graph TD
 
 ```
 
-### 1.2 The Deployment Workflow
+### 3.2 The Deployment Workflow
 
 1. **Continuous Integration (CI)**: Pushes to any feature branch trigger automated linting and unit tests to ensure code quality before reaching the peer review stage.
 2. **Staging Promotion**: Upon merging a Pull Request into the `main` branch, the bundle is automatically deployed to the Staging environment.
@@ -43,7 +43,7 @@ graph TD
 5. **Production Release**: Merging the Release PR triggers the production workflow, deploying assets to the Production environment using a Service Principal identity for maximum security.
 6. **Fast-Track "Escape Hatch"**: Developers can bypass the standard release cycle by commenting `/release` on an open PR. This triggers an immediate merge to `main` and initiates the Production deployment pipeline, providing an accelerated path for urgent changes.
 
-### 1.3 Automated Versioning (SemVer)
+### 3.3 Automated Versioning (SemVer)
 
 We use **Release Please** to calculate version bumps based on Conventional Commits:
 
@@ -59,7 +59,7 @@ We use **Release Please** to calculate version bumps based on Conventional Commi
 
 ---
 
-## 1. Standardized Project Blueprint
+## 4. Standardized Project Blueprint
 
 This layout is the mandatory standard for all current and future Databricks projects to ensure cross-team compatibility and ease of maintenance.
 
@@ -88,9 +88,9 @@ This layout is the mandatory standard for all current and future Databricks proj
 
 ---
 
-## 1. Configuration & Automation Components
+## 5. Configuration & Automation Components
 
-### 1.1 The Coordinator (`databricks.yml`)
+### 5.1 The Coordinator (`databricks.yml`)
 
 The Databricks Asset Bundle (DAB) is a declarative framework that allows you to define your Databricks resources as code. The `databricks.yml` file acts as the primary "Skeleton," importing resources and defining global variables that the Databricks CLI uses to assemble the deployment package.
 
@@ -105,7 +105,7 @@ include:
 
 ```
 
-### 1.2 Target Overrides (`targets/`)
+### 5.2 Target Overrides (`targets/`)
 
 Targets provide environment-specific configurations. The CLI merges the base bundle with the specific target logic during deployment.
 
@@ -122,13 +122,13 @@ Variables allow for dynamic configuration. For example, in `sandbox.yml`, we use
 You can override these via the CLI:
 `databricks bundle deploy -t sandbox --var "catalog_name=experimental_catalog"`
 
-### 1.3 Resource Definitions (`resources/`)
+### 5.3 Resource Definitions (`resources/`)
 
 Files in this directory define the *what* of your project . By modularizing these, you can manage complex workflows in smaller, readable chunks.
 
 The `resources/` directory defines the high-level Databricks objects (Jobs, DLT Pipelines, Dashboards) that the bundle will create and manage. By separating these into logical files, we maintain a clean and scalable configuration that can be easily reviewed during the PR process.
 
-#### 1.3.1 Resource Categorization
+#### 5.3.1 Resource Categorization
 
 Resources are split by type to prevent a single, unmanageable YAML file:
 
@@ -136,11 +136,11 @@ Resources are split by type to prevent a single, unmanageable YAML file:
 * **`jobs.yml`**: Configures multi-task workflows, including trigger schedules (cron), email notifications on failure, and cluster requirements.
 * **`pipelines.yml`**: Specific to Delta Live Tables (DLT), defining materialization logic and data quality constraints (Expectations).
 
-#### 1.3.2 Resource Overrides & Shared Logic
+#### 5.3.2 Resource Overrides & Shared Logic
 
 Because the `databricks.yml` coordinates these files, you can define a "base" resource and then apply environment-specific tweaks in your targets. For example, a job might run on a small shared cluster in **Staging** but move to a high-concurrency SQL Warehouse in **Production**.
 
-#### 1.3.3 Implementation Example: `resources/jobs.yml`
+#### 5.3.3 Implementation Example: `resources/jobs.yml`
 
 ```yaml
 resources:
@@ -163,7 +163,7 @@ resources:
 
 ---
 
-## 1. The Command Interface (`Taskfile.yml`)
+## 6. The Command Interface (`Taskfile.yml`)
 
 The Taskfile acts as a human-readable wrapper for complex CLI commands.
 
@@ -191,7 +191,7 @@ tasks:
 
 ---
 
-## 1. GitHub Workflows (`.github/workflows/`)
+## 7. GitHub Workflows (`.github/workflows/`)
 
 Common files include `lint.yml` (PR validation), `staging.yml` (on push to main), and `production.yml` (on release).
 
@@ -219,7 +219,7 @@ jobs:
 
 ---
 
-## 1. Technology Stack & Resource Directory
+## 8. Technology Stack & Resource Directory
 
 This section provides a centralized directory of the core technologies, tools, and documentation links that comprise our DataOps platform.
 
