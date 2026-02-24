@@ -45,16 +45,13 @@ The current state of development requires a more robust automation strategy to h
 
 ### Goals
 
-*
-**Unified Task Execution:** Use a root-level Taskfile to orchestrate sub-projects (backend/frontend) while maintaining local execution parity.
+* **Unified Task Execution:** Use a root-level Taskfile to orchestrate sub-projects (backend/frontend) while maintaining local execution parity.
 
 
-*
-**Ephemeral Environments:** Automatically deploy feature branches to unique Kubernetes namespaces based on PR ID.
+* **Ephemeral Environments:** Automatically deploy feature branches to unique Kubernetes namespaces based on PR ID.
 
 
-*
-**Continuous Deployment:** Enable automatic deployment to production upon merging to the `main` branch.
+* **Continuous Deployment:** Enable automatic deployment to production upon merging to the `main` branch.
 
 
 * **Security Shift-Left:** Integrate image scanning (Trivy) and cryptographic signing (Cosign) into the build process.
@@ -108,30 +105,25 @@ includes:
 ### Security & Compliance
 
 * **Image Integrity:** Images are signed using Cosign's keyless mode, leveraging GitHub's OIDC provider.
-*
-**Runtime Security:** All containers run as non-root users (UID 10001).
+* **Runtime Security:** All containers run as non-root users (UID 10001).
 
 
-*
-**Secret Management:** For this phase, secrets are injected via GitHub Secrets into the Helm deployment.
+* **Secret Management:** For this phase, secrets are injected via GitHub Secrets into the Helm deployment.
 
 
 
 ### Observability
 
-*
-**OpenTelemetry:** We deploy an `Instrumentation` CRD via the OTel Operator to automatically inject tracing libraries into the Python and Node.js pods.
+* **OpenTelemetry:** We deploy an `Instrumentation` CRD via the OTel Operator to automatically inject tracing libraries into the Python and Node.js pods.
 
 
-*
-**Standardized Probes:** Every component must implement `/health` endpoints for Kubernetes Liveness and Readiness checks.
+* **Standardized Probes:** Every component must implement `/health` endpoints for Kubernetes Liveness and Readiness checks.
 
 
 
 ### Scalability
 
-*
-**Resource Management:** Production deployments use `values-prod.yaml` to define Horizontal Pod Autoscalers (HPA) and resource limits (512MiB/500m CPU for backend).
+* **Resource Management:** Production deployments use `values-prod.yaml` to define Horizontal Pod Autoscalers (HPA) and resource limits (512MiB/500m CPU for backend).
 
 
 * **Multi-Stage Dockerfiles:** Drastic reduction in image size by separating build dependencies from the final runtime environment.
@@ -140,20 +132,16 @@ includes:
 
 ## 7. Implementation Plan
 
-1.
-**Phase 1:** Setup hierarchical Taskfiles and multi-stage Dockerfiles.
+1. **Phase 1:** Setup hierarchical Taskfiles and multi-stage Dockerfiles.
 
 
-2.
-**Phase 2:** Configure GitHub Actions for ephemeral PR environments and namespace cleanup.
+2. **Phase 2:** Configure GitHub Actions for ephemeral PR environments and namespace cleanup.
 
 
-3.
-**Phase 3:** Integrate Trivy scanning, Cosign signing, and MS Teams notification tasks.
+3. **Phase 3:** Integrate Trivy scanning, Cosign signing, and MS Teams notification tasks.
 
 
-4.
-**Phase 4:** Deploy OpenTelemetry Operator and configure auto-instrumentation.
+4. **Phase 4:** Deploy OpenTelemetry Operator and configure auto-instrumentation.
 
 
 
@@ -161,8 +149,7 @@ includes:
 
 ## 8. Alternatives Considered
 
-*
-**Raw Manifests vs. Helm:** Raw manifests were rejected because they do not support the dynamic logic required for ephemeral subdomains and namespace-based configuration.
+* **Raw Manifests vs. Helm:** Raw manifests were rejected because they do not support the dynamic logic required for ephemeral subdomains and namespace-based configuration.
 
 
 * **Monolithic Taskfile:** Rejected because it becomes unmaintainable as the backend and frontend teams grow and require different build tools.
@@ -172,5 +159,4 @@ includes:
 ## 9. Discussion & Feedback
 
 * **On-Prem Connectivity:** This design assumes the self-hosted GitHub Runner has `cluster-admin` (or scoped namespace-admin) access to the local K8s cluster.
-*
-**Notification Hook:** The MS Teams webhook URL must be stored as a GitHub Secret to prevent unauthorized channel spamming.
+* **Notification Hook:** The MS Teams webhook URL must be stored as a GitHub Secret to prevent unauthorized channel spamming.
