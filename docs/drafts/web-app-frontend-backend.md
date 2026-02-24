@@ -87,35 +87,35 @@ To implement the proposed architecture for the FastAPI and Node.js monorepo, the
 .
 ├── .github/
 │   └── workflows/
-[cite_start]│       ├── pipeline.yml            # Main CI/CD pipeline (Lint, Test, Build, Scan, Deploy) [cite: 12]
+│       ├── pipeline.yml            # Main CI/CD pipeline (Lint, Test, Build, Scan, Deploy) 
 │       └── cleanup.yml             # PR cleanup automation (Deletes namespaces on close)
 ├── backend/                        # FastAPI Application
 │   ├── tests/
 │   │   ├── unit/                   # Pytest unit tests
-[cite_start]│   │   └── integration/            # Testinfra K8s integration tests [cite: 12]
-[cite_start]│   ├── Dockerfile                  # Multi-stage, non-root Python build [cite: 12]
+│   │   └── integration/            # Testinfra K8s integration tests
+│   ├── Dockerfile                  # Multi-stage, non-root Python build
 │   ├── main.py                     # FastAPI entry point
 │   ├── requirements.txt
-[cite_start]│   └── Taskfile.yml                # Backend-specific tasks (test, build, lint) [cite: 9, 12]
+│   └── Taskfile.yml                # Backend-specific tasks (test, build, lint)
 ├── frontend/                       # Node.js Application
 │   ├── tests/                      # Jest/Vitest unit tests
 │   ├── src/
-[cite_start]│   ├── Dockerfile                  # Multi-stage, non-root Node.js build [cite: 12]
+│   ├── Dockerfile                  # Multi-stage, non-root Node.js build
 │   ├── package.json
-[cite_start]│   └── Taskfile.yml                # Frontend-specific tasks (test, build, lint) [cite: 12]
+│   └── Taskfile.yml                # Frontend-specific tasks (test, build, lint)
 ├── charts/
-[cite_start]│   └── app/                        # Unified Helm Chart [cite: 12, 15]
+│   └── app/                        # Unified Helm Chart
 │       ├── templates/
 │       │   ├── _helpers.tpl
-[cite_start]│       │   ├── deployment.yaml      # Dynamic deployment for both components [cite: 12]
+│       │   ├── deployment.yaml      # Dynamic deployment for both components 
 │       │   ├── ingress.yaml         # Ephemeral & Prod ingress rules
 │       │   ├── networkpolicy.yaml   # Least-privilege traffic rules
 │       │   ├── otel-instrumentation.yaml # OTel CRD for auto-tracing
 │       │   └── serviceaccount.yaml
 │       ├── values.yaml              # Default/Ephemeral values
-[cite_start]│       ├── values-prod.yaml         # Production-specific overrides (HPA, Replicas) [cite: 11]
+│       ├── values-prod.yaml         # Production-specific overrides (HPA, Replicas)
 │       └── Chart.yaml
-[cite_start]├── Taskfile.yml                    # Root Taskfile (Orchestrator & Global Vars) [cite: 9, 12]
+├── Taskfile.yml                    # Root Taskfile (Orchestrator & Global Vars)
 ├── .gitignore
 ├── .env.example                    # Template for local environment variables
 └── README.md                       # Project documentation
