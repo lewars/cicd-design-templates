@@ -77,6 +77,68 @@ The pipeline utilizes **GitHub Actions** as the orchestrator and **Task** as the
 
 The following expanded **Technical Specification** provides the implementation-level details for the polyglot CI/CD architecture. It integrates the hierarchical task management, container strategy, security gates, and deployment mechanics discussed. 
 
+### Project Layout
+
+To implement the proposed architecture for the FastAPI and Node.js monorepo, the following file layout is recommended. This structure supports (Root Orchestration), hierarchical Taskfiles, and the multi-component Helm chart discussed in the design document.
+
+### Monorepo File Layout Overview
+
+```text
+.
+├── .github/
+│   └── workflows/
+[cite_start]│       ├── pipeline.yml            # Main CI/CD pipeline (Lint, Test, Build, Scan, Deploy) [cite: 12]
+│       └── cleanup.yml             # PR cleanup automation (Deletes namespaces on close)
+├── backend/                        # FastAPI Application
+│   ├── tests/
+│   │   ├── unit/                   # Pytest unit tests
+[cite_start]│   │   └── integration/            # Testinfra K8s integration tests [cite: 12]
+[cite_start]│   ├── Dockerfile                  # Multi-stage, non-root Python build [cite: 12]
+│   ├── main.py                     # FastAPI entry point
+│   ├── requirements.txt
+[cite_start]│   └── Taskfile.yml                # Backend-specific tasks (test, build, lint) [cite: 9, 12]
+├── frontend/                       # Node.js Application
+│   ├── tests/                      # Jest/Vitest unit tests
+│   ├── src/
+[cite_start]│   ├── Dockerfile                  # Multi-stage, non-root Node.js build [cite: 12]
+│   ├── package.json
+[cite_start]│   └── Taskfile.yml                # Frontend-specific tasks (test, build, lint) [cite: 12]
+├── charts/
+[cite_start]│   └── app/                        # Unified Helm Chart [cite: 12, 15]
+│       ├── templates/
+│       │   ├── _helpers.tpl
+[cite_start]│       │   ├── deployment.yaml      # Dynamic deployment for both components [cite: 12]
+│       │   ├── ingress.yaml         # Ephemeral & Prod ingress rules
+│       │   ├── networkpolicy.yaml   # Least-privilege traffic rules
+│       │   ├── otel-instrumentation.yaml # OTel CRD for auto-tracing
+│       │   └── serviceaccount.yaml
+│       ├── values.yaml              # Default/Ephemeral values
+[cite_start]│       ├── values-prod.yaml         # Production-specific overrides (HPA, Replicas) [cite: 11]
+│       └── Chart.yaml
+[cite_start]├── Taskfile.yml                    # Root Taskfile (Orchestrator & Global Vars) [cite: 9, 12]
+├── .gitignore
+├── .env.example                    # Template for local environment variables
+└── README.md                       # Project documentation
+
+```
+
+### Key Components Explained
+
+* **Root `Taskfile.yml**`: Acts as the central command center. It defines global variables like `REGISTRY` and `TAG` and includes the child Taskfiles from `/backend` and `/frontend`.
+
+
+* **`.github/workflows/pipeline.yml`**: Encapsulates the GitHub Actions logic. It maps secrets to environment variables and calls the root Taskfile for execution.
+
+
+* **`charts/app/`**: A single Helm chart used to deploy both the frontend and backend. Using a single chart for the monorepo simplifies dependency management and ensures that the networking between the two components is defined in one place.
+
+
+* **`backend/tests/integration/`**: Contains the **testinfra** code. This is specifically placed in the backend folder but is executed by the root Taskfile after the Helm deployment to verify the live Kubernetes state.
+
+
+
+This layout ensures that a developer can work entirely within a sub-folder (using the local Taskfile) or manage the entire stack from the root, matching the technical specifications of the design document.
+
 ---
 
 ### 5.1 Hierarchical Task Orchestration (Strategy C)
