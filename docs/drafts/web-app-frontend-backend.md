@@ -117,7 +117,7 @@ To implement the proposed architecture for the FastAPI and Node.js monorepo, the
 
 ### Key Components Explained
 
-* **Root `Taskfile.yml**`: Acts as the central command center. It defines global variables like `REGISTRY` and `TAG` and includes the child Taskfiles from `/backend` and `/frontend`.
+* **Root** **`Taskfile.yml`**: Acts as the central command center. It defines global variables like `REGISTRY` and `TAG` and includes the child Taskfiles from `/backend` and `/frontend`.
 
 
 * **`.github/workflows/pipeline.yml`**: Encapsulates the GitHub Actions logic. It maps secrets to environment variables and calls the root Taskfile for execution.
@@ -134,7 +134,7 @@ This layout ensures that a developer can work entirely within a sub-folder (usin
 
 ---
 
-### 5.1 Hierarchical Task Orchestration (Strategy C)
+### 5.1 Hierarchical Task Orchestration
 
 The project utilizes a root `Taskfile.yml` to act as the primary interface for GitHub Actions, while delegating local build and test logic to sub-project Taskfiles.
 
