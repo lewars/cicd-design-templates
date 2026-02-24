@@ -75,21 +75,197 @@ The pipeline utilizes **GitHub Actions** as the orchestrator and **Task** as the
 
 ### Technical Specification
 
-#### A. Hierarchical Taskfile Structure (Strategy C)
+The following expanded **Technical Specification** provides the implementation-level details for the polyglot CI/CD architecture. It integrates the hierarchical task management, container strategy, security gates, and deployment mechanics discussed. 
 
-We utilize a root `Taskfile.yml` that includes child Taskfiles from the `/backend` and `/frontend` directories.  This ensures that domain-specific logic (like Python's `pytest` or Node's `npm`) stays encapsulated while the root manages the deployment context.
+---
+
+### 5.1 Hierarchical Task Orchestration (Strategy C)
+
+The project utilizes a root `Taskfile.yml` to act as the primary interface for GitHub Actions, while delegating local build and test logic to sub-project Taskfiles. 
+
+#### Root `Taskfile.yml`
 
 ```yaml
-# /Taskfile.yml
+version: '3'
+
+vars:
+  REGISTRY: '{{default "ghcr.io/your-org" .REGISTRY}}'
+  TAG: '{{default "latest" .TAG}}'
+  CLUSTER_DOMAIN: '{{default "dev.local" .CLUSTER_DOMAIN}}'
+
 includes:
-  backend:
+  backend: 
     taskfile: ./backend/Taskfile.yml
     dir: ./backend
-  frontend:
+  frontend: 
     taskfile: ./frontend/Taskfile.yml
     dir: ./frontend
 
+tasks:
+  deploy:ephemeral:
+    desc: Deploy PR-specific environment
+    vars:
+      NS: pr-{{.PR_NUM}}
+    cmds:
+      - |
+        helm upgrade --install {{.NS}} ./charts/app \
+          --namespace {{.NS}} --create-namespace \
+          --set backend.image.tag={{.TAG}} \
+          --set frontend.image.tag={{.TAG}} \
+          --set ingress.host={{.NS}}.{{.CLUSTER_DOMAIN}}
+
+  scan:
+    desc: Vulnerability scanning for all artifacts
+    cmds:
+      - trivy image --severity CRITICAL --exit-code 1 {{.REGISTRY}}/backend:{{.TAG}}
+      - trivy image --severity CRITICAL --exit-code 1 {{.REGISTRY}}/frontend:{{.TAG}}
+
 ```
+
+#### Backend `backend/Taskfile.yml`
+
+```yaml
+version: '3'
+tasks:
+  test:
+    cmds:
+      - pytest tests/unit
+  build:
+    cmds:
+      - docker build -t {{.REGISTRY}}/backend:{{.TAG}} .
+
+```
+
+---
+
+### 5.2 Container Strategy: Multi-Stage & Non-Root
+
+To ensure minimal image size and maximum security, both applications utilize multi-stage Dockerfiles. 
+
+**Example Backend `Dockerfile`:**
+
+```dockerfile
+# Stage 1: Build
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# Stage 2: Runtime
+FROM python:3.12-slim
+RUN useradd -u 10001 appuser
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY . .
+USER 10001
+CMD ["python", "main.py"]
+
+```
+
+---
+
+### 5.3 GitHub Actions Workflow (Push-Based CD)
+
+The pipeline manages the lifecycle from pull request to production deployment. 
+
+```yaml
+# .github/workflows/pipeline.yml
+name: Polyglot CD
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, closed]
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and Push
+        run: task build:all push TAG=${{ github.sha }}
+      
+      - name: Security Scan
+        run: task scan TAG=${{ github.sha }}
+
+      - name: Deploy Ephemeral
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        run: task deploy:ephemeral PR_NUM=${{ github.event.number }} TAG=${{ github.sha }}
+
+      - name: Deploy Production
+        if: github.ref == 'refs/heads/main'
+        run: task deploy:prod TAG=${{ github.sha }}
+
+```
+
+---
+
+### 5.4 Observability: OTel Instrumentation
+
+The system leverages the OpenTelemetry Operator to automate tracing and metrics. 
+
+**OTel Instrumentation Manifest:**
+
+```yaml
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: polyglot-autoinstrumentation
+spec:
+  exporter:
+    endpoint: http://otel-collector.monitoring.svc.cluster.local:4317
+  python:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:latest
+  nodejs:
+    image: ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:latest
+
+```
+
+Application pods are instrumented by adding the annotation `instrumentation.opentelemetry.io/inject-python: "true"` to the deployment metadata. 
+
+---
+
+### 5.5 Security: Signing and Scanning
+
+1. **Vulnerability Scanning:** Trivy runs as a gate in the pipeline, failing the build on `CRITICAL` findings. 
+
+
+2. **Image Signing:** Production images are signed via **Cosign** using keyless mode. 
+
+
+* **Logic:** `cosign sign --yes <image-digest>` 
+
+
+* **Verification:** On-prem clusters verify the signature against the GitHub OIDC issuer before pull. 
+
+---
+
+### 5.6 Deployment Messaging (MS Teams)
+
+Real-time feedback is provided to the engineering team via MS Teams webhooks. 
+
+**Task Implementation:**
+
+```yaml
+notify:teams:
+  cmds:
+    - |
+      curl -H "Content-Type: application/json" \
+      -d '{
+        "summary": "Deployment: {{.NAMESPACE}}",
+        "themeColor": "{{if eq .STATUS "Success"}}00FF00{{else}}FF0000{{end}}",
+        "sections": [{
+          "activityTitle": "Environment: {{.NAMESPACE}}",
+          "facts": [{"name": "Tag", "value": "{{.TAG}}"}]
+        }]
+      }' "{{.TEAMS_WEBHOOK}}"
+
+```
+
+---
 
 #### B. Deployment Lifecycle
 
