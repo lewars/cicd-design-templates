@@ -329,6 +329,156 @@ notify:teams:
 
 ---
 
+## Helm / K8s Implementation
+To implement the deployment strategy discussed in the design document , we utilize a unified Helm chart approach for the monorepo. This allows for consistent management of the FastAPI backend and Node.js frontend as a single logical unit.
+
+### 1. Helm Chart Directory Structure
+
+Following the file layout overview, the `charts/app/` directory is structured to separate configuration from templates:
+
+```text
+charts/app/
+├── Chart.yaml              # Metadata about the chart [cite: 1]
+[cite_start]├── values.yaml               # Default values (Ephemeral/Dev) [cite: 12, 13]
+[cite_start]├── values-prod.yaml          # Production-specific overrides [cite: 15]
+[cite_start]└── templates/                # Kubernetes manifest templates [cite: 12]
+    ├── _helpers.tpl          # Reusable template logic
+    [cite_start]├── deployment.yaml       # Core deployment logic [cite: 12]
+    ├── ingress.yaml          # Hostname and routing logic
+    [cite_start]├── networkpolicy.yaml    # Security isolation rules [cite: 13]
+    [cite_start]├── otel-instrumentation.yaml # Observability CRD [cite: 13]
+    └── serviceaccount.yaml   # RBAC identities
+
+```
+
+---
+
+### 2. The Unified Deployment Template
+
+The `deployment.yaml` uses a Helm `range` loop to iterate over the components defined in your values file. This keeps the code "DRY" (Don't Repeat Yourself).
+
+```yaml
+# charts/app/templates/deployment.yaml
+{{- range $name, $config := .Values.components }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.fullname" $ }}-{{ $name }}
+  labels:
+    app: {{ $name }}
+spec:
+  replicas: {{ $config.replicaCount }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+      annotations:
+        {{- if $.Values.otel.enabled }}
+        # [cite_start]Auto-instrumentation based on component type [cite: 13]
+        instrumentation.opentelemetry.io/inject-{{ if eq $name "backend" }}python{{ else }}nodejs{{ end }}: "true"
+        {{- end }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        [cite_start]runAsUser: 10001 # Matches Dockerfile non-root user [cite: 12]
+      containers:
+        - name: {{ $name }}
+          image: "{{ $.Values.registry }}/{{ $name }}:{{ $.Values.image.tag }}"
+          ports:
+            - containerPort: {{ $config.port }}
+          livenessProbe:
+            httpGet:
+              path: {{ $config.healthPath }}
+              port: {{ $config.port }}
+          resources:
+            {{- toYaml $config.resources | nindent 12 }}
+{{- end }}
+
+```
+
+---
+
+### 3. Dynamic Ingress for Ephemeral Environments
+
+The `ingress.yaml` allows the CI pipeline to pass a unique hostname via the `--set` flag in the Taskfile.
+
+```yaml
+# charts/app/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - [cite_start]host: {{ .Values.ingress.host | quote }} # Injected via Taskfile [cite: 9, 12]
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "app.fullname" . }}-backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "app.fullname" . }}-frontend
+                port:
+                  number: 80
+
+```
+
+---
+
+### 4. Configuration: Values Strategy
+
+We use two files to manage the difference between ephemeral PR environments and the production environment.
+
+#### Default `values.yaml` (Optimized for Ephemeral/Local)
+
+* **Replicas**: Set to 1 to save cluster resources during PR testing.
+
+
+* **OTel**: Enabled by default to verify instrumentation in dev.
+
+
+
+#### Production `values-prod.yaml` (Optimized for Scale)
+
+* **Replicas**: Increased to 3+ for High Availability.
+
+
+* **Resources**: Increased memory and CPU limits to handle 10x load.
+
+
+* **HPA**: Horizontal Pod Autoscaling is enabled here.
+
+
+
+---
+
+### 5. Observability and Security
+
+As detailed in the implementation plan , we include specific manifests for the OTel Operator and Network Security:
+
+* **`otel-instrumentation.yaml`**: Defines the `Instrumentation` Custom Resource used by the OTel Operator to inject tracing libraries into your pods without modifying source code.
+
+
+* **`networkpolicy.yaml`**: Implements "Least Privilege" by only allowing the frontend to talk to the backend on its specific API port.
+
+
+---
+
 #### B. Deployment Lifecycle
 
 1. **Continuous Integration (CI):** Triggered on PR. Includes Linting, Unit Testing, and Docker building.
