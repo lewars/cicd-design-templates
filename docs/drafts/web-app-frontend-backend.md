@@ -12,20 +12,13 @@
 
 ## 1. Status
 
-| Field | Value |
-| --- | --- |
-| **Status** | DRAFT
+| Field         | Value                     |
+|---------------|---------------------------|
+| **Status**    | DRAFT                     |
+| **Owner**     | Alistair Y. Lewars        |
+| **Reviewers** | Platform Engineering Team |
+| **Updated**   | 2026-02-24                |
 
- |
-| **Owner** | Alistair Y. Lewars
-
- |
-| **Reviewers** | Platform Engineering Team
-
- |
-| **Updated** | 2026-02-24
-
- |
 
 ---
 
@@ -75,7 +68,7 @@ The pipeline utilizes **GitHub Actions** as the orchestrator and **Task** as the
 
 ### Technical Specification
 
-The following expanded **Technical Specification** provides the implementation-level details for the polyglot CI/CD architecture. It integrates the hierarchical task management, container strategy, security gates, and deployment mechanics discussed. 
+The following expanded **Technical Specification** provides the implementation-level details for the polyglot CI/CD architecture. It integrates the hierarchical task management, container strategy, security gates, and deployment mechanics discussed.
 
 ### Project Layout
 
@@ -87,7 +80,7 @@ To implement the proposed architecture for the FastAPI and Node.js monorepo, the
 .
 ├── .github/
 │   └── workflows/
-│       ├── pipeline.yml            # Main CI/CD pipeline (Lint, Test, Build, Scan, Deploy) 
+│       ├── pipeline.yml            # Main CI/CD pipeline (Lint, Test, Build, Scan, Deploy)
 │       └── cleanup.yml             # PR cleanup automation (Deletes namespaces on close)
 ├── backend/                        # FastAPI Application
 │   ├── tests/
@@ -107,7 +100,7 @@ To implement the proposed architecture for the FastAPI and Node.js monorepo, the
 │   └── app/                        # Unified Helm Chart
 │       ├── templates/
 │       │   ├── _helpers.tpl
-│       │   ├── deployment.yaml      # Dynamic deployment for both components 
+│       │   ├── deployment.yaml      # Dynamic deployment for both components
 │       │   ├── ingress.yaml         # Ephemeral & Prod ingress rules
 │       │   ├── networkpolicy.yaml   # Least-privilege traffic rules
 │       │   ├── otel-instrumentation.yaml # OTel CRD for auto-tracing
@@ -143,7 +136,7 @@ This layout ensures that a developer can work entirely within a sub-folder (usin
 
 ### 5.1 Hierarchical Task Orchestration (Strategy C)
 
-The project utilizes a root `Taskfile.yml` to act as the primary interface for GitHub Actions, while delegating local build and test logic to sub-project Taskfiles. 
+The project utilizes a root `Taskfile.yml` to act as the primary interface for GitHub Actions, while delegating local build and test logic to sub-project Taskfiles.
 
 #### Root `Taskfile.yml`
 
@@ -156,10 +149,10 @@ vars:
   CLUSTER_DOMAIN: '{{default "dev.local" .CLUSTER_DOMAIN}}'
 
 includes:
-  backend: 
+  backend:
     taskfile: ./backend/Taskfile.yml
     dir: ./backend
-  frontend: 
+  frontend:
     taskfile: ./frontend/Taskfile.yml
     dir: ./frontend
 
@@ -202,7 +195,7 @@ tasks:
 
 ### 5.2 Container Strategy: Multi-Stage & Non-Root
 
-To ensure minimal image size and maximum security, both applications utilize multi-stage Dockerfiles. 
+To ensure minimal image size and maximum security, both applications utilize multi-stage Dockerfiles.
 
 **Example Backend `Dockerfile`:**
 
@@ -228,7 +221,7 @@ CMD ["python", "main.py"]
 
 ### 5.3 GitHub Actions Workflow (Push-Based CD)
 
-The pipeline manages the lifecycle from pull request to production deployment. 
+The pipeline manages the lifecycle from pull request to production deployment.
 
 ```yaml
 # .github/workflows/pipeline.yml
@@ -249,7 +242,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and Push
         run: task build:all push TAG=${{ github.sha }}
-      
+
       - name: Security Scan
         run: task scan TAG=${{ github.sha }}
 
@@ -267,7 +260,7 @@ jobs:
 
 ### 5.4 Observability: OTel Instrumentation
 
-The system leverages the OpenTelemetry Operator to automate tracing and metrics. 
+The system leverages the OpenTelemetry Operator to automate tracing and metrics.
 
 **OTel Instrumentation Manifest:**
 
@@ -286,28 +279,28 @@ spec:
 
 ```
 
-Application pods are instrumented by adding the annotation `instrumentation.opentelemetry.io/inject-python: "true"` to the deployment metadata. 
+Application pods are instrumented by adding the annotation `instrumentation.opentelemetry.io/inject-python: "true"` to the deployment metadata.
 
 ---
 
 ### 5.5 Security: Signing and Scanning
 
-1. **Vulnerability Scanning:** Trivy runs as a gate in the pipeline, failing the build on `CRITICAL` findings. 
+1. **Vulnerability Scanning:** Trivy runs as a gate in the pipeline, failing the build on `CRITICAL` findings.
 
 
-2. **Image Signing:** Production images are signed via **Cosign** using keyless mode. 
+2. **Image Signing:** Production images are signed via **Cosign** using keyless mode.
 
 
-* **Logic:** `cosign sign --yes <image-digest>` 
+* **Logic:** `cosign sign --yes <image-digest>`
 
 
-* **Verification:** On-prem clusters verify the signature against the GitHub OIDC issuer before pull. 
+* **Verification:** On-prem clusters verify the signature against the GitHub OIDC issuer before pull.
 
 ---
 
 ### 5.6 Deployment Messaging (MS Teams)
 
-Real-time feedback is provided to the engineering team via MS Teams webhooks. 
+Real-time feedback is provided to the engineering team via MS Teams webhooks.
 
 **Task Implementation:**
 
@@ -338,15 +331,15 @@ Following the file layout overview, the `charts/app/` directory is structured to
 
 ```text
 charts/app/
-├── Chart.yaml              # Metadata about the chart [cite: 1]
-[cite_start]├── values.yaml               # Default values (Ephemeral/Dev) [cite: 12, 13]
-[cite_start]├── values-prod.yaml          # Production-specific overrides [cite: 15]
-[cite_start]└── templates/                # Kubernetes manifest templates [cite: 12]
+├── Chart.yaml              # Metadata about the chart
+├── values.yaml               # Default values (Ephemeral/Dev)
+├── values-prod.yaml          # Production-specific overrides
+└── templates/                # Kubernetes manifest templates
     ├── _helpers.tpl          # Reusable template logic
-    [cite_start]├── deployment.yaml       # Core deployment logic [cite: 12]
+    ├── deployment.yaml       # Core deployment logic
     ├── ingress.yaml          # Hostname and routing logic
-    [cite_start]├── networkpolicy.yaml    # Security isolation rules [cite: 13]
-    [cite_start]├── otel-instrumentation.yaml # Observability CRD [cite: 13]
+    ├── networkpolicy.yaml    # Security isolation rules
+    ├── otel-instrumentation.yaml # Observability CRD
     └── serviceaccount.yaml   # RBAC identities
 
 ```
@@ -380,13 +373,13 @@ spec:
         app: {{ $name }}
       annotations:
         {{- if $.Values.otel.enabled }}
-        # [cite_start]Auto-instrumentation based on component type [cite: 13]
+        # Auto-instrumentation based on component type
         instrumentation.opentelemetry.io/inject-{{ if eq $name "backend" }}python{{ else }}nodejs{{ end }}: "true"
         {{- end }}
     spec:
       securityContext:
         runAsNonRoot: true
-        [cite_start]runAsUser: 10001 # Matches Dockerfile non-root user [cite: 12]
+        runAsUser: 10001 # Matches Dockerfile non-root user
       containers:
         - name: {{ $name }}
           image: "{{ $.Values.registry }}/{{ $name }}:{{ $.Values.image.tag }}"
@@ -418,7 +411,7 @@ metadata:
     kubernetes.io/ingress.class: nginx
 spec:
   rules:
-    - [cite_start]host: {{ .Values.ingress.host | quote }} # Injected via Taskfile [cite: 9, 12]
+    - host: {{ .Values.ingress.host | quote }} # Injected via Taskfile
       http:
         paths:
           - path: /api
