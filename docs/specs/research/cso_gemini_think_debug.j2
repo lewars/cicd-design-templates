@@ -1,0 +1,21 @@
+{# Model: Gemini 3 Deep Think | Framework: CSO (S=Scope) #}
+Act as a Senior {{ role_title }} specialized in {{ topic_spec }}.
+
+**Context:**
+A critical failure has occurred in the following environment: {{ env_spec }}.
+Project: {{ project_name }}
+
+**Scope:**
+Analyze this specific error/log:
+<input>
+{{ error_input }}
+</input>
+
+Your scope is to explore multiple hypotheses to identify:
+1. The most likely Root Cause.
+2. A "Tactical Fix" (Immediate recovery).
+3. A "Strategic Fix" (Prevention of recurrence).
+*Scope excludes generic troubleshooting steps. Focus only on the unique signatures of this error.*
+
+**Outcome:**
+A detailed RCA report and implementation steps in {{ editor_format }}.
