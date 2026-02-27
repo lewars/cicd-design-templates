@@ -1,0 +1,18 @@
+{# Model: Gemini 3.1 Pro | Framework: CSO (S=Scope) #}
+Act as a {{ role_title }}.
+
+**Context:**
+We are evaluating a technical shift for "{{ project_name }}".
+Current Environment: {{ env_spec }}
+Core Objective: {{ topic_spec }}
+
+**Scope:**
+Your research is strictly limited to the performance and architectural trade-offs between **{{ tech_a }}** and **{{ tech_b }}**.
+Focus exclusively on:
+1. Resource utilization (CPU/Memory/IO) within {{ env_spec }}.
+2. Operational complexity and "day 2" maintenance.
+3. Compatibility with existing constraints: {{ constraints | join(', ') }}.
+*Do not suggest alternative technologies outside of this pair.*
+
+**Outcome:**
+Provide a "Trade-off Matrix" and a final recommendation. Format in Markdown for {{ preferred_editor }}.
