@@ -1,0 +1,14 @@
+targets:
+  sandbox:
+    mode: development
+    default: true
+
+    workspace:
+      root_path: /Users/${workspace.current_user.short_name}/.bundle/${bundle.name}/${bundle.git_branch}
+
+    variables:
+      warehouse_id: ""        # Override via: databricks bundle deploy -t sandbox --var "warehouse_id=<id>"
+      source_catalog: dev
+
+    run_as:
+      user_name: ${workspace.current_user.short_name}

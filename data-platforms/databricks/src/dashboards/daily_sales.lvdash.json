@@ -1,0 +1,187 @@
+{
+  "pages": [
+    {
+      "name": "Overview",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "kpi_total_revenue",
+            "textbox_spec": "",
+            "spec": {
+              "version": 3,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_revenue",
+                  "displayName": "Total Revenue",
+                  "format": {
+                    "type": "currency",
+                    "currencyCode": "USD"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Revenue (Today)"
+              }
+            },
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "daily_transactions",
+                  "fields": [
+                    {
+                      "name": "total_revenue",
+                      "expression": "SUM(`amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ]
+          },
+          "position": { "x": 0, "y": 0, "width": 2, "height": 3 }
+        },
+        {
+          "widget": {
+            "name": "kpi_total_orders",
+            "textbox_spec": "",
+            "spec": {
+              "version": 3,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_orders",
+                  "displayName": "Total Orders"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Orders (Today)"
+              }
+            },
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "daily_transactions",
+                  "fields": [
+                    {
+                      "name": "total_orders",
+                      "expression": "COUNT(*)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ]
+          },
+          "position": { "x": 2, "y": 0, "width": 2, "height": 3 }
+        },
+        {
+          "widget": {
+            "name": "revenue_over_time",
+            "textbox_spec": "",
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "transaction_date",
+                  "displayName": "Date",
+                  "type": "temporal",
+                  "axis": { "title": "Date" }
+                },
+                "y": {
+                  "fieldName": "daily_revenue",
+                  "displayName": "Revenue (USD)",
+                  "type": "quantitative",
+                  "axis": { "title": "Revenue (USD)" }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Daily Revenue (Last 30 Days)"
+              }
+            },
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "daily_transactions",
+                  "fields": [
+                    {
+                      "name": "transaction_date",
+                      "expression": "`transaction_date`"
+                    },
+                    {
+                      "name": "daily_revenue",
+                      "expression": "SUM(`amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ]
+          },
+          "position": { "x": 0, "y": 3, "width": 4, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "revenue_by_region",
+            "textbox_spec": "",
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "regional_revenue",
+                  "displayName": "Revenue",
+                  "type": "quantitative"
+                },
+                "color": {
+                  "fieldName": "region",
+                  "displayName": "Region",
+                  "type": "nominal"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Revenue by Region"
+              }
+            },
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "daily_transactions",
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "regional_revenue",
+                      "expression": "SUM(`amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ]
+          },
+          "position": { "x": 4, "y": 3, "width": 2, "height": 6 }
+        }
+      ]
+    }
+  ],
+  "datasets": [
+    {
+      "name": "daily_transactions",
+      "displayName": "Daily Transactions",
+      "query": "SELECT\n  transaction_date,\n  region,\n  amount\nFROM ${var.source_catalog}.sales.daily_transactions\nWHERE transaction_date >= DATEADD(DAY, -30, CURRENT_DATE())"
+    }
+  ]
+}
