@@ -1,0 +1,103 @@
+version: '3'
+
+vars:
+  BUNDLE_NAME: marketing_analytics
+
+tasks:
+
+  bundle:validate:
+    desc: "Validate the DAB configuration without deploying"
+    cmds:
+      - databricks bundle validate
+
+  db-deploy:sandbox:
+    desc: "Deploy to personal sandbox (isolated by user + branch)"
+    cmds:
+      - databricks bundle deploy -t sandbox
+
+  db-deploy:staging:
+    desc: "Deploy to Staging (internal use / CI)"
+    cmds:
+      - databricks bundle deploy -t staging
+
+  db-deploy:prod:
+    desc: "Deploy to Production (Service Principal only)"
+    cmds:
+      - databricks bundle deploy -t prod --var "sp_id=${PROD_SP_ID}"
+    requires:
+      vars: [PROD_SP_ID]
+
+  db-destroy:sandbox:
+    desc: "Tear down sandbox resources for the current user + branch"
+    cmds:
+      - databricks bundle destroy -t sandbox --auto-approve
+
+  db-destroy:staging:
+    desc: "Tear down Staging resources (use with caution)"
+    prompt: "This will destroy all Staging resources. Continue?"
+    cmds:
+      - databricks bundle destroy -t staging --auto-approve
+
+  format:
+    desc: "Format all Python source and test files with black"
+    cmds:
+      - black src/ tests/
+
+  format:check:
+    desc: "Check formatting without modifying files (used in CI)"
+    cmds:
+      - black --check src/ tests/
+
+  lint:
+    desc: "Lint all Python source and test files with ruff"
+    cmds:
+      - ruff check src/ tests/
+
+  lint:fix:
+    desc: "Lint and auto-fix all fixable ruff violations"
+    cmds:
+      - ruff check --fix src/ tests/
+
+  test:unit:
+    desc: "Run unit tests (no live Databricks connection required)"
+    cmds:
+      - pytest tests/unit/ -v
+
+  test:integration:
+    desc: "Run integration tests against Staging (requires live workspace)"
+    cmds:
+      - pytest tests/integration/ -v
+
+  test:nonfunctional:
+    desc: "Run performance / SLO tests against Staging or Production"
+    cmds:
+      - pytest tests/nonfunctional/ -v
+
+  test:all:
+    desc: "Run the full test suite (unit → integration → nonfunctional)"
+    cmds:
+      - task: test:unit
+      - task: test:integration
+      - task: test:nonfunctional
+
+  notify:
+    desc: "Send a Teams webhook notification (STATUS, TARGET_ENV, BUNDLE_VERSION, TEAMS_WEBHOOK_URL required)"
+    cmds:
+      - |
+        bash scripts/db_notify.sh \
+          --status "${STATUS}" \
+          --env "${TARGET_ENV}" \
+          --version "${BUNDLE_VERSION}" \
+          --webhook_url "${TEAMS_WEBHOOK_URL}"
+    requires:
+      vars: [STATUS, TARGET_ENV, BUNDLE_VERSION, TEAMS_WEBHOOK_URL]
+
+  setup:
+    desc: "Install local development dependencies"
+    cmds:
+      - pip install -r requirements-dev.txt
+
+  setup:secret-scope:
+    desc: "Create a Databricks secret scope for the bundle (sandbox only)"
+    cmds:
+      - databricks secrets create-scope {{.BUNDLE_NAME}} --initial-manage-principal users

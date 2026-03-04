@@ -1,0 +1,42 @@
+# Databricks
+.bundle/
+*.tfplan
+*.tfstate
+*.tfstate.backup
+
+# Secrets
+.secrets
+*.env
+.env.*
+*.token
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Taskfile
+.task/
+
+# Emacs
+*~
+\#*\#
+.\#*
+*.elc
+.dir-locals.el
+
+# macOS
+.DS_Store
+
+# Editor misc
+.idea/
+.vscode/
+*.swp
+*.swo
