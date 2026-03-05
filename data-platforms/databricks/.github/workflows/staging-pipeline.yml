@@ -1,0 +1,97 @@
+name: Staging Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Deploy to Staging
+        run: |
+          ARGS="-t staging"
+          [ -n "$WAREHOUSE_ID" ] && ARGS="$ARGS --var warehouse_id=$WAREHOUSE_ID"
+          databricks bundle deploy $ARGS
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WAREHOUSE_ID: ${{ vars.STAGING_WAREHOUSE_ID }}
+
+      - name: Notify Teams on Success
+        if: success()
+        run: |
+          bash scripts/notify.sh \
+            --status "Success" \
+            --env "staging" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ github.sha }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "staging" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ github.sha }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run integration tests
+        run: pytest tests/integration/ -v --tb=short
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "staging" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ github.sha }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"

@@ -1,0 +1,111 @@
+name: Production Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version being deployed (e.g. 1.4.2)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "value=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to Production
+        run: |
+          ARGS="-t prod --var sp_id=${PROD_SP_ID}"
+          [ -n "$WAREHOUSE_ID" ] && ARGS="$ARGS --var warehouse_id=$WAREHOUSE_ID"
+          databricks bundle deploy $ARGS
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          PROD_SP_ID: ${{ vars.PROD_SP_ID }}
+          WAREHOUSE_ID: ${{ vars.PROD_WAREHOUSE_ID }}
+
+      - name: Notify Teams on Success
+        if: success()
+        run: |
+          bash scripts/notify.sh \
+            --status "Success" \
+            --env "prod" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ steps.version.outputs.value }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "prod" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ steps.version.outputs.value }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+  nonfunctional-tests:
+    name: Non-Functional Tests
+    runs-on: ubuntu-latest
+    environment: production
+    needs: deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run non-functional tests
+        run: pytest tests/nonfunctional/ -v --tb=short
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "prod" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "${{ steps.version.outputs.value }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"

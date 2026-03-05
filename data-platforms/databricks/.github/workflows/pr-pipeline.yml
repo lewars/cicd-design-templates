@@ -1,0 +1,109 @@
+name: PR Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - name: Validate DAB configuration
+        run: databricks bundle validate
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "pr" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "pr-${{ github.event.pull_request.number }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Check formatting (black)
+        run: black --check src/ tests/
+
+      - name: Lint (ruff)
+        run: ruff check src/ tests/
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "pr" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "pr-${{ github.event.pull_request.number }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --tb=short
+
+      - name: Notify Teams on Failure
+        if: failure()
+        run: |
+          bash scripts/notify.sh \
+            --status "Failed" \
+            --env "pr" \
+            --bundle "${{ vars.BUNDLE_NAME }}" \
+            --version "pr-${{ github.event.pull_request.number }}" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --webhook-url "${{ secrets.TEAMS_WEBHOOK_URL }}"
