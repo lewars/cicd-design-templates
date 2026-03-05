@@ -257,7 +257,7 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DB_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DB_TOKEN }}
-          PROD_SP_ID: ${{ secrets.PROD_SP_ID }}
+          PROD_SP_ID: ${{ vars.PROD_SP_ID }}
 
 
 ```
