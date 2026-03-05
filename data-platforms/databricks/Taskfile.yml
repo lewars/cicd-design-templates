@@ -12,18 +12,33 @@ tasks:
 
   db-deploy:sandbox:
     desc: "Deploy to personal sandbox (isolated by user + branch)"
+    vars:
+      WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
     cmds:
-      - databricks bundle deploy -t sandbox
+      - |
+        ARGS="-t sandbox"
+        [ -n "{{.WAREHOUSE_ID}}" ] && ARGS="$ARGS --var warehouse_id={{.WAREHOUSE_ID}}"
+        databricks bundle deploy $ARGS
 
   db-deploy:staging:
     desc: "Deploy to Staging (internal use / CI)"
+    vars:
+      WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
     cmds:
-      - databricks bundle deploy -t staging
+      - |
+        ARGS="-t staging"
+        [ -n "{{.WAREHOUSE_ID}}" ] && ARGS="$ARGS --var warehouse_id={{.WAREHOUSE_ID}}"
+        databricks bundle deploy $ARGS
 
   db-deploy:prod:
     desc: "Deploy to Production (Service Principal only)"
+    vars:
+      WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
     cmds:
-      - databricks bundle deploy -t prod --var "sp_id=${PROD_SP_ID}"
+      - |
+        ARGS="-t prod --var sp_id=${PROD_SP_ID}"
+        [ -n "{{.WAREHOUSE_ID}}" ] && ARGS="$ARGS --var warehouse_id={{.WAREHOUSE_ID}}"
+        databricks bundle deploy $ARGS
     requires:
       vars: [PROD_SP_ID]
 

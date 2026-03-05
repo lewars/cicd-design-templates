@@ -1,0 +1,19 @@
+bundle:
+  name: marketing_analytics
+
+variables:
+  warehouse_id:
+    description: "SQL Warehouse ID for the target environment"
+  source_catalog:
+    description: "Unity Catalog source catalog for the target environment"
+    default: dev
+  sp_id:
+    description: "Service Principal ID for production deployments"
+    default: ""
+
+workspace:
+  host: ${DATABRICKS_HOST}
+
+include:
+  - targets/*.yml
+  - resources/*.yml
