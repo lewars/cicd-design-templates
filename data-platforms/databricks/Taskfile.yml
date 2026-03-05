@@ -10,7 +10,7 @@ tasks:
     cmds:
       - databricks bundle validate
 
-  db-deploy:sandbox:
+  deploy:sandbox:
     desc: "Deploy to personal sandbox (isolated by user + branch)"
     vars:
       WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
@@ -20,7 +20,7 @@ tasks:
         [ -n "{{.WAREHOUSE_ID}}" ] && ARGS="$ARGS --var warehouse_id={{.WAREHOUSE_ID}}"
         databricks bundle deploy $ARGS
 
-  db-deploy:staging:
+  deploy:staging:
     desc: "Deploy to Staging (internal use / CI)"
     vars:
       WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
@@ -30,7 +30,7 @@ tasks:
         [ -n "{{.WAREHOUSE_ID}}" ] && ARGS="$ARGS --var warehouse_id={{.WAREHOUSE_ID}}"
         databricks bundle deploy $ARGS
 
-  db-deploy:prod:
+  deploy:prod:
     desc: "Deploy to Production (Service Principal only)"
     vars:
       WAREHOUSE_ID: '{{.WAREHOUSE_ID | default ""}}'
@@ -42,12 +42,12 @@ tasks:
     requires:
       vars: [PROD_SP_ID]
 
-  db-destroy:sandbox:
+  destroy:sandbox:
     desc: "Tear down sandbox resources for the current user + branch"
     cmds:
       - databricks bundle destroy -t sandbox --auto-approve
 
-  db-destroy:staging:
+  destroy:staging:
     desc: "Tear down Staging resources (use with caution)"
     prompt: "This will destroy all Staging resources. Continue?"
     cmds:
@@ -99,7 +99,7 @@ tasks:
     desc: "Send a Teams webhook notification (STATUS, TARGET_ENV, BUNDLE_VERSION, TEAMS_WEBHOOK_URL required)"
     cmds:
       - |
-        bash scripts/db_notify.sh \
+        bash scripts/notify.sh \
           --status "${STATUS}" \
           --env "${TARGET_ENV}" \
           --version "${BUNDLE_VERSION}" \
@@ -111,6 +111,25 @@ tasks:
     desc: "Install local development dependencies"
     cmds:
       - pip install -r requirements-dev.txt
+
+  auth:status:
+    desc: "Check current Databricks authentication status"
+    cmds:
+      - databricks auth status
+
+  auth:login:
+    desc: "Authenticate with Databricks (interactive, sandbox/local use only)"
+    cmds:
+      - |
+        if [ -n "${DATABRICKS_HOST:-}" ]; then
+          databricks auth login --host "${DATABRICKS_HOST}"
+        elif databricks auth env --host 2>/dev/null | grep -q "DATABRICKS_HOST"; then
+          databricks auth login
+        else
+          echo "Error: DATABRICKS_HOST is not set and no host found in ~/.databrickscfg" >&2
+          echo "Usage: DATABRICKS_HOST=https://<workspace>.azuredatabricks.net task auth:login" >&2
+          exit 1
+        fi
 
   setup:secret-scope:
     desc: "Create a Databricks secret scope for the bundle (sandbox only)"

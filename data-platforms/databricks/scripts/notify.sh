@@ -1,9 +1,9 @@
 #!/bin/bash
-# scripts/db_notify.sh
+# scripts/notify.sh
 # Posts an Adaptive Card to an MS Teams webhook channel.
 #
 # Usage:
-#   bash scripts/db_notify.sh \
+#   bash scripts/notify.sh \
 #     --status "Success" \
 #     --env "prod" \
 #     --bundle "marketing_analytics" \
@@ -13,9 +13,6 @@
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
 STATUS=""
 ENV=""
 BUNDLE=""
@@ -35,9 +32,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ---------------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------------
 MISSING=()
 [[ -z "$STATUS" ]]      && MISSING+=("--status")
 [[ -z "$ENV" ]]         && MISSING+=("--env")
@@ -51,9 +45,6 @@ if [[ ${#MISSING[@]} -gt 0 ]]; then
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Resolve status emoji and colour
-# ---------------------------------------------------------------------------
 case "${STATUS,,}" in
   success) EMOJI="✅"; COLOR="Good" ;;
   failed|failure) EMOJI="❌"; COLOR="Attention" ;;
@@ -62,9 +53,6 @@ esac
 
 TITLE="${EMOJI} Deployment ${STATUS}: ${BUNDLE}"
 
-# ---------------------------------------------------------------------------
-# Build Adaptive Card payload
-# ---------------------------------------------------------------------------
 PAYLOAD=$(cat <<EOF
 {
   "type": "message",
@@ -112,9 +100,6 @@ PAYLOAD=$(cat <<EOF
 EOF
 )
 
-# ---------------------------------------------------------------------------
-# POST to Teams webhook
-# ---------------------------------------------------------------------------
 HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
   -H "Content-Type: application/json" \
   -d "${PAYLOAD}" \

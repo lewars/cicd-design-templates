@@ -1,0 +1,13 @@
+targets:
+  prod:
+    mode: production
+
+    workspace:
+      root_path: /bundles/${bundle.name}/prod
+
+    variables:
+      warehouse_id: ""        # Override via: databricks bundle deploy -t prod --var "warehouse_id=<id>"
+      source_catalog: prod
+
+    run_as:
+      service_principal_name: ${var.sp_id}

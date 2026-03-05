@@ -1,0 +1,13 @@
+targets:
+  staging:
+    mode: staging
+
+    workspace:
+      root_path: /bundles/${bundle.name}/staging
+
+    variables:
+      warehouse_id: ""        # Override via: databricks bundle deploy -t staging --var "warehouse_id=<id>"
+      source_catalog: staging
+
+    run_as:
+      service_principal_name: ${var.sp_id}
