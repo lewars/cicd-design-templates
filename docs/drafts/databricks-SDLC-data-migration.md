@@ -170,3 +170,134 @@ graph TD
 1. **Continuous Integration:** The runner executes syntax linters and local configurations tests (`pytest`) against feature branch commits.
 2. **Data Layer Schema Updates:** The bundle uploads code and forces execution of the Databricks `dbt_migration_job`. dbt builds or amends tables/views directly inside the environment's specific Unity Catalog.
 3. **Application Deployment:** Only upon successful database execution does the pipeline roll forward to deploy backend API and React updates, safeguarding user interfaces from mismatched backend definitions.
+
+Here are the new sections to integrate directly into your design document, establishing a clear development lifecycle, Git tag versioning strategy, and step-by-step rollback playbooks.
+
+---
+
+## 3.4 Local Development to CI/CD Workflow
+
+This section outlines how data scientists safely write, test, and promote SQL changes through the monorepo lifecycle, eliminating the anti-pattern of manual staging or production code edits.
+
+```text
+[Local Sandbox] ──> [Git Push & PR] ──> [Slim CI Validation] ──> [Merge & Staging Deploy]
+
+```
+
+### Step 1: Isolated Sandbox Development
+
+Data scientists work inside their personal sandbox schemas using the dbt CLI or Databricks Notebooks. Using the configuration wrapper (`Taskfile.yml`), they compile and test queries locally against their isolated Unity Catalog development catalog:
+
+```bash
+# Developer runs dbt targeted at their personal sandbox
+task db-run:sandbox
+# Expands to: dbt run --target dev --vars 'catalog: dev_user_sandbox'
+
+```
+
+### Step 2: Continuous Integration & Slim CI
+
+When a developer completes a feature, they commit code using **Conventional Commits** and open a Pull Request against `main`.
+
+GitHub Actions intercepts the PR and executes a **Slim CI** run. Instead of rebuilding all data models (which wastes time and compute), the pipeline fetches the production state artifact (`manifest.json`) from cloud storage and processes *only the modified files*:
+
+```yaml
+- name: Run Slim CI for Pull Request
+  run: |
+    dbt deps
+    dbt run --select state:modified --state ./prod_artifacts/ --target staging
+    dbt test --select state:modified --state ./prod_artifacts/ --target staging
+
+```
+
+### Step 3: Staging Promotion & Testing
+
+Once the PR passes checks and peer review, it is merged into `main`. The merge triggers an automated push to the Staging Workspace, executing full integration tests to guarantee that backend application APIs map perfectly to the newly generated database views.
+
+---
+
+## 5. Versioning via Git Tags
+
+To replace untracked production deployments, this platform treats Git tags as immutable snapshots of both the infrastructure layout (DABs), the data models (dbt), and application files (React/Python).
+
+### 5.1 Automated Tag Generation
+
+When using the standard release path, the `release-please` automation aggregates squash-merged commits on `main`. Once a release PR is merged, the system automatically creates a semantic Git tag (e.g., `v1.2.0`) and publishes a GitHub Release.
+
+### 5.2 Production Tag Deployment Workflow
+
+Production deployments are strictly bound to these version tags. This guarantees that code running in production matches an exact, auditable point in history.
+
+```yaml
+name: Production Release Deployment
+on:
+  release:
+    types: [published] # Triggered automatically when a Git tag is minted
+
+jobs:
+  production-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code at Specific Tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }} # Checks out v1.2.0 explicitly
+
+      - name: Deploy Full Monorepo Bundle
+        run: task db-deploy:prod
+        env:
+          DATABRICKS_HOST: ${{ secrets.PROD_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.PROD_SPN_TOKEN }}
+          BUNDLE_VERSION: ${{ github.event.release.tag_name }}
+
+```
+
+---
+
+## 6. Emergency Rollback Playbooks
+
+When a production deployment introduces a bug, the team executes one of two deterministic rollback paths depending on whether the failure stems from a **software logic error** or **data corruption**.
+
+### Playbook A: Code & Schema Rollback (Git-Driven)
+
+*Use this when a query logic error or column schema modification breaks the Python API or React components.*
+
+Because dbt is state-based, rolling back the database requires rolling back the Git history. This resets the "desired state" of the database, prompting the CI/CD pipeline to automatically downgrade the production schemas.
+
+```bash
+# 1. Locate the broken commit and the known healthy tag (e.g., v1.1.5)
+git log --oneline
+
+# 2. Create an emergency hotfix branch from main
+git checkout -b hotfix/revert-v1.2.0 main
+
+# 3. Revert the broken merge commit
+git revert -m 1 [BROKEN_COMMIT_SHA]
+
+# 4. Commit and push using the conventional commit syntax to bypass release blocks
+git commit -m "fix!: revert data schema changes back to v1.1.5"
+git push origin hotfix/revert-v1.2.0
+
+```
+
+> **Automation Result:** Once merged back to `main`, a new version tag is minted (e.g., `v1.2.1`). The CI/CD pipeline automatically executes `dbt run`, which evaluates the reverted code structure and alters or recreates the production tables/views to mirror the original `v1.1.5` operational baseline.
+
+### Playbook B: Data Corruption Rollback (Delta Lake Time Travel)
+
+*Use this when a bad deployment or query run successfully applies but corrupts, duplicates, or deletes historical underlying data records.*
+
+If data is corrupted, do not wait for a full Git pipeline to rebuild historical records. Leverage Delta Lake’s immutable transaction log to instantaneously roll database state backward in time.
+
+```sql
+-- 1. Inspect the history of the table to find the last healthy transaction ID or Timestamp
+DESCRIBE HISTORY prod_catalog.analytics.dashboard_metrics;
+
+-- 2. Validate data at a specific healthy point in history to ensure correctness
+SELECT * FROM prod_catalog.analytics.dashboard_metrics TIMESTAMP AS OF "2026-05-26 08:00:00";
+
+-- 3. Execute an atomic, instantaneous restoration of the table state
+RESTORE TABLE prod_catalog.analytics.dashboard_metrics TO TIMESTAMP AS OF "2026-05-26 08:00:00";
+
+```
+
+> **Automation Result:** The `RESTORE` command commits a brand new transaction to the Delta log, instantly making the corrupted rows disappear for the Python API layer. The operation finishes in seconds regardless of table size because it modifies metadata pointers rather than rewriting large underlying physical data files.
