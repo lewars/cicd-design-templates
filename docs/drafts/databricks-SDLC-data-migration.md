@@ -170,7 +170,13 @@ graph TD
 2. **Data Layer Schema Updates:** The bundle uploads code and forces execution of the Databricks `dbt_migration_job`. dbt builds or amends tables/views directly inside the environment's specific Unity Catalog.
 3. **Application Deployment:** Only upon successful database execution does the pipeline roll forward to deploy backend API and React updates, safeguarding user interfaces from mismatched backend definitions.
 
-Here are the new sections to integrate directly into your design document, establishing a clear development lifecycle, Git tag versioning strategy, and step-by-step roThis section outlines how data scientists safely write, test, and promote SQL changes through the monorepo lifecycle, eliminating the anti-pattern of manual production code edits.
+Here are the new sections to integrate directly into your design document, establishing a clear development lifecycle, Git tag versioning strategy, and step-by-step rollback playbooks.
+
+---
+
+## 3.4 Local Development to CI/CD Workflow
+
+This section outlines how data scientists safely write, test, and promote SQL changes through the monorepo lifecycle, eliminating the anti-pattern of manual production code edits.
 
 ```text
 [Local Sandbox] ──> [Git Push & PR] ──> [Slim CI Validation] ──> [Merge & Production Deploy]
@@ -204,7 +210,7 @@ GitHub Actions intercepts the PR and executes a **Slim CI** run. Instead of rebu
 
 ### Step 3: Production Promotion & Testing
 
-Once the PR passes checks and peer review, it is merged into `main`. The merge triggers an automated push to the Production Workspace, executing full integration tests to guarantee that backend application APIs map perfectly to the newly generated database views.at backend application APIs map perfectly to the newly generated database views.
+Once the PR passes checks and peer review, it is merged into `main`. The merge triggers an automated push to the Production Workspace, executing full integration tests to guarantee that backend application APIs map perfectly to the newly generated database views.
 
 ---
 
