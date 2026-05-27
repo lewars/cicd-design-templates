@@ -60,8 +60,8 @@ Rather than manually renaming tables (e.g., `my_table_dev` vs `my_table_prod`) i
 
 | Environment Target | Target Workspace | Unity Catalog Target |
 | --- | --- | --- |
-| **Development** | `dss-svc-eng-nonprod-us-east-1.cloud.databricks.com` | `dev_catalog.analytics.orders` |
-| **Production** | `dss-svc-eng-prod-us-east-1.cloud.databricks.com` | `prod_catalog.analytics.orders` |
+| **Development** | `dss-svc-eng-nonprod-us-east-1.cloud.databricks.com` | `dev_catalog` |
+| **Production** | `dss-svc-eng-prod-us-east-1.cloud.databricks.com` | `prod_catalog` |
 
 ### 3. State-Based Change Management and Rollback Pattern
 
@@ -69,7 +69,7 @@ Rather than manually renaming tables (e.g., `my_table_dev` vs `my_table_prod`) i
 * **Code Rollback:** Reverting a broken feature is handled via Git. Reverting a commit on `main` triggers dbt to re-evaluate the previous SQL file state and re-compile the target tables to match that exact structural logic.
 * **Data Rollback:** If historical data is corrupted during an execution, the architecture leverages Delta Lake's native **Time Travel** capability to restore tables to a healthy timestamp instantly, bypassing transactional down-migrations:
 ```sql
-RESTORE TABLE prod_catalog.analytics.orders TO TIMESTAMP AS OF '2026-05-25 12:00:00';
+RESTORE TABLE prod_catalog.analytics.dashboard_metrics TO TIMESTAMP AS OF '2026-05-25 12:00:00';
 
 ```
 
