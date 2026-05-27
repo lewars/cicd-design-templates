@@ -60,9 +60,8 @@ Rather than manually renaming tables (e.g., `my_table_dev` vs `my_table_prod`) i
 
 | Environment Target | Target Workspace | Unity Catalog Target |
 | --- | --- | --- |
-| **Development** | `workspace-dev.azuredatabricks.net` | `dev_catalog.analytics.orders` |
-| **Staging** | `workspace-staging.azuredatabricks.net` | `staging_catalog.analytics.orders` |
-| **Production** | `workspace-prod.azuredatabricks.net` | `prod_catalog.analytics.orders` |
+| **Development** | `dss-svc-eng-nonprod-us-east-1.cloud.databricks.com` | `dev_catalog.analytics.orders` |
+| **Production** | `dss-svc-eng-prod-us-east-1.cloud.databricks.com` | `prod_catalog.analytics.orders` |
 
 ### 3. State-Based Change Management and Rollback Pattern
 
@@ -91,13 +90,13 @@ bundle:
 targets:
   dev:
     workspace:
-      host: https://adb-dev.azuredatabricks.net
+      host: https://dss-svc-eng-nonprod-us-east-1.cloud.databricks.com
     variables:
       env: dev
       catalog: dev_catalog
   prod:
     workspace:
-      host: https://adb-prod.azuredatabricks.net
+      host: https://dss-svc-eng-prod-us-east-1.cloud.databricks.com
     variables:
       env: prod
       catalog: prod_catalog
@@ -171,17 +170,10 @@ graph TD
 2. **Data Layer Schema Updates:** The bundle uploads code and forces execution of the Databricks `dbt_migration_job`. dbt builds or amends tables/views directly inside the environment's specific Unity Catalog.
 3. **Application Deployment:** Only upon successful database execution does the pipeline roll forward to deploy backend API and React updates, safeguarding user interfaces from mismatched backend definitions.
 
-Here are the new sections to integrate directly into your design document, establishing a clear development lifecycle, Git tag versioning strategy, and step-by-step rollback playbooks.
-
----
-
-## 3.4 Local Development to CI/CD Workflow
-
-This section outlines how data scientists safely write, test, and promote SQL changes through the monorepo lifecycle, eliminating the anti-pattern of manual staging or production code edits.
+Here are the new sections to integrate directly into your design document, establishing a clear development lifecycle, Git tag versioning strategy, and step-by-step roThis section outlines how data scientists safely write, test, and promote SQL changes through the monorepo lifecycle, eliminating the anti-pattern of manual production code edits.
 
 ```text
-[Local Sandbox] ──> [Git Push & PR] ──> [Slim CI Validation] ──> [Merge & Staging Deploy]
-
+[Local Sandbox] ──> [Git Push & PR] ──> [Slim CI Validation] ──> [Merge & Production Deploy]
 ```
 
 ### Step 1: Isolated Sandbox Development
@@ -205,14 +197,14 @@ GitHub Actions intercepts the PR and executes a **Slim CI** run. Instead of rebu
 - name: Run Slim CI for Pull Request
   run: |
     dbt deps
-    dbt run --select state:modified --state ./prod_artifacts/ --target staging
-    dbt test --select state:modified --state ./prod_artifacts/ --target staging
+    dbt run --select state:modified --state ./prod_artifacts/ --target dev
+    dbt test --select state:modified --state ./prod_artifacts/ --target dev
 
 ```
 
-### Step 3: Staging Promotion & Testing
+### Step 3: Production Promotion & Testing
 
-Once the PR passes checks and peer review, it is merged into `main`. The merge triggers an automated push to the Staging Workspace, executing full integration tests to guarantee that backend application APIs map perfectly to the newly generated database views.
+Once the PR passes checks and peer review, it is merged into `main`. The merge triggers an automated push to the Production Workspace, executing full integration tests to guarantee that backend application APIs map perfectly to the newly generated database views.at backend application APIs map perfectly to the newly generated database views.
 
 ---
 
